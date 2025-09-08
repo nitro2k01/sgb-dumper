@@ -1,0 +1,26 @@
+Modules list:
+-------------
+snespayload.o:
+    code              Offs=000000  Size=0000AC  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+code                  001800  0018AB  0000AC  00001
+
+
+Exports list by name:
+---------------------
+
+
+
+Exports list by value:
+----------------------
+
+
+
+Imports list:
+-------------
+

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<title>SGB Dumper filer merger</title>
+	<meta name="description" content="This tool can reconstruct the SGB system software from partial files produced by the Universal SGB Dumper tool."/>
+	<meta name="keywords" content="super, game, boy, system, firmware, merge, sgb, snes"/>
+	<meta http-equiv="content-Type" content="text/html; charset=UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+	<link type="text/css" rel="stylesheet" href="app/style.css" media="all"/>
+	<link rel="shortcut icon" href="assets/favicon.png" type="image/png" sizes="16x16"/>
+
+	<script src="app/cash.min.js"></script>
+	<script src="app/FileSaver.min.js"></script>
+	<script type="module" src="app/main.js"></script>
+</head>
+
+<body ondragstart="return false;">
+<div id="modal-status-container" class="hidden">
+	<div id="modal-status">Drop files to load</div>
+</div>
+<div style="flex-grow:1; display:flex; align-items:center;">
+	<div id="wrapper">	
+		<main>
+			<header>
+				<h1 class="hide">SGB Dumper filer merger</h1>
+				<img id="logo" src="assets/logo.png" loading="lazy" alt="Super Game Boy Border Injector logo"/>
+				<hr/>
+			</header>
+
+			<div id="intro">
+				<p>This tool allows you to reconstruct the Super Game Boy system ROM image from files dumped by the Universal SGB Dumper tool, which copies the system ROM onto the Game Boy cartridge's save RAM. To download the ROM needed to extract the SGB system ROM, and details on how to use this tool, please see the documentation in the <a href="https://github.com/nitro2k01/sgb-dumper">Universal SGB Dumper repo</a>.</p>
+				<p>To use the tool, open or drag and drop partial files from the dumper. You can open the files in any order. The tool will automatically analyze the partial files and order the parts the parts correctly. Different revisions of SGB share data, so adding a file may register as completing parts of multiple ROM revisions. When all parts have been received, you can download the complete SGB system ROM image.</p>
+				<p>This tool runs completely on the client side. No information about the files you open is sent to a remote server.</p>
+			</div>
+
+			<div class="text-center mt-10 mb-10" id="btn-upload">
+				<button type="button" id="btn-add-file" class="btn btn-mainscope btn-primary"><img src="assets/octicon_package_dependents.svg" class="octicon" />Add partial file</button>
+			</div>
+
+			<div id="last-status">
+				<p><b>Status:</b> Waiting for files. Click "add partial files" or drag and drop files over the page.</p>
+			</div>
+
+			<div id="roms-status">
+			</div>
+
+			<input type="file" id="input-file-rom" multiple accept=".sav,.gb" class="hide" />
+		</main>
+
+	</div>
+</div>
+
+
+<footer>
+	<a href="https://github.com/nitro2k01/sgb-dumper">SGB Dumper</a> File Merger v1.0 by <a href="https://github.com/nitro2k01">nitro2k01</a>
+	<img src="assets/octicon_github.svg" alt="GitHub logo" class="octicon" /> 
+	<br/>
+	HTML/JS heavily based on <a href="https://github.com/marcrobledo/super-game-boy-border-injector/"  target="_blank">Super Game Boy Border Injector</a> by <a href="https://www.marcrobledo.com" target="_blank">Marc Robledo</a>
+	<img src="assets/octicon_github.svg" alt="GitHub logo" class="octicon" /> 
+</footer>
+</body>
+
+</html>
