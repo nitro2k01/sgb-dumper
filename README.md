@@ -35,13 +35,13 @@ You then need to take the save files you've dumped and concatenate them into a s
 On Linux or other UNIX-ey systems, you can merge them with a command like below, which `cat`s the partial files and pipes them to the destination.
 
 ```
-cat part0.sav part1.sav part2.sav part3.sav > sgb.smc
+cat part0.sav part1.sav part2.sav part3.sav > sgb.sfc
 ```
 
 On Windows, you can use the copy command with the `/b` switch for binary, and the `+` operator to concatenate files.
 
 ```
-copy /b part0.sav + part1.sav + part2.sav + part3.sav sgb.smc
+copy /b part0.sav + part1.sav + part2.sav + part3.sav sgb.sfc
 ```
 
 However, I'm also offering a web based file merger which is really a modified version of [Marc Robledo's SGB Injector](https://github.com/marcrobledo/super-game-boy-border-injector/) since my web dev skills are not really up to date. You cannot run this locally by just opening the HTML file in a web browser, as most browsers will block Javascript from working for local files for security reasons. I'm hosting a copy [here](https://gg8.se/sgb-merger) that you can use. Other options include uploading the files to your own web server, or running a local server using Python.
@@ -426,7 +426,7 @@ The joypad interrupt is triggered when the 4 bit joypad bus goes from all bits b
 1111 Default value, prepare for next interrupt.
 ```
 
-Another note on the protocol is how commands are sent to the SNES. This is done through the `JUMP` command. The `JUMP` command is only using 6 of the available 15 bytes, for the target jump address and NMI handler. So 9 unused bytes remain. We can simply put any parameters we need in those bytes. Om the SNES side, a copy of the SGB packet is stored at address `$600` and onward, which means we can read it from there.
+Another note on the protocol is how commands are sent to the SNES. This is done through the `JUMP` command. The `JUMP` command is only using 6 of the available 15 bytes, for the target jump address and NMI handler. So 9 unused bytes remain. We can simply put any parameters we need in those bytes. On the SNES side, a copy of the SGB packet is stored at address `$600` and onward, which means we can read it from there.
 
 Over all, this protocol could theoretically be improved further, in a couple of ways. 
 - By using all 9 available bits in a 3 stage transfer assuming one bit is used as a clock signal. However, I deemed this to be too much added complication for too little gain, since 9 bits is an awkward size with the 1 extra bit.
@@ -462,3 +462,9 @@ The best (contrived) use case I can think of maybe a simulator game or similar, 
 Well, I have one more idea for a use case. This would be a SNES game that's fully streamed from the GB cartridge, and the GB CPU acts as an IO processor. The SNES game would then request chunks of data from the GB, as a level is loaded and so on. One obvious use case for bulk transfers in this context is writing back save data to the GB cartridge. But another, more subtle, use case is sending commands from the SNES to the GB. You may need/want a packet size which, while smaller than several kilobytes in size, is bigger than 4 bytes. You might for example ask the GB to cue up reads from a few different pointers in ROM, which might need a packet size of a few tens of bytes to express comfortably. 
 
 If you're a SNES programmer who thinks this would be a cool idea to try, reach out I guess.
+
+### Addendum 1: using additional buttons (X/Y/L/R)
+
+I was asked the question whether this communication method would be useful for using additional buttons from a SNES controller in your game. My recommendation would be to instead make a SNES payload that maps the additional buttons to buttons to buttons for player 2. In this way, the buttons can be read using a fairly standard multiplayer joypad read routine. There are 4 bytes available using the "regular" transfer method, where each byte is intended to hold a full set of GB buttons (D-pad + select + start + B + A). This has the added benefit that even emulators that don't support low-level emulation of the SGB can support the extended buttons by asking the user to map their controller's X/Y/L/R to the correct player 2 buttons. A practical example of this (with included source code) is available in [Super Awakening](https://github.com/cphartman/super-awakening/), a Zelda DX ROM hack. 
+
+Similarly, if you want multiplayer support, *and* X/Y/L/R support, you could do that to. For 2 player mode, you could enable 4 player mode, and map the additional buttons to player 3 or 4. If you want to support 3 players, you finally hit a limit where you only have 8 bits left to store button states in, so you might have to cut down on what buttons are available to what players. If you want to support 4 players, you finally hit the absolute limit, where all available bytes are fully occupied by just the basic GB buttons, and you would have to look for a more "creative" data transfer protocol like the one showcased in my project.
