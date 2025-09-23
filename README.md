@@ -1,5 +1,7 @@
 # Universal SGB dumper
 
+![Page header showing the SGB dumper logo and a visual representation of the software flow](images/page-header-2x.png)
+
 Universal SGB dumper is a tool for dumping the SNES firmware from a Super Gameboy using a Gameboy cartridge. This is an idea that was suggested by PinoBatch for allowing users to easily and legally create a dump of their own SGB cartridge for use in emulators, pursuant to 17 USC 117 and foreign counterparts. I'm however personally more interested in exploring a new technique which I believe no one has really tried before. Other people, including in one game released in the commercial era of the SNES, Space Invaders, have explored running code on the SNES through the SGB. But no one as far as I know have done bulk transfer of many kilobytes of data from the SNES to the GB side. Maybe, in part, because it's mostly useless outside of this very use case. :)
 
 The ROM works by uploading code from the Gameboy to the SNES using the `DATA_SND` command and then jumping to it using the `JUMP` command, which are both provided by the SGB. Then it's using the data port, normally used for sending the current joypad state to the game, to exfiltrate the contents of the cartridge and save them in some location specified by the user. The challenge with this project was to come up with a transfer protocol that was both fast enough to be practical, but also reliable, which I did in the end. 
@@ -468,3 +470,37 @@ If you're a SNES programmer who thinks this would be a cool idea to try, reach o
 I was asked the question whether this communication method would be useful for using additional buttons from a SNES controller in your game. My recommendation would be to instead make a SNES payload that maps the additional buttons to buttons to buttons for player 2. In this way, the buttons can be read using a fairly standard multiplayer joypad read routine. There are 4 bytes available using the "regular" transfer method, where each byte is intended to hold a full set of GB buttons (D-pad + select + start + B + A). This has the added benefit that even emulators that don't support low-level emulation of the SGB can support the extended buttons by asking the user to map their controller's X/Y/L/R to the correct player 2 buttons. A practical example of this (with included source code) is available in [Super Awakening](https://github.com/cphartman/super-awakening/), a Zelda DX ROM hack. 
 
 Similarly, if you want multiplayer support, *and* X/Y/L/R support, you could do that to. For 2 player mode, you could enable 4 player mode, and map the additional buttons to player 3 or 4. If you want to support 3 players, you finally hit a limit where you only have 8 bits left to store button states in, so you might have to cut down on what buttons are available to what players. If you want to support 4 players, you finally hit the absolute limit, where all available bytes are fully occupied by just the basic GB buttons, and you would have to look for a more "creative" data transfer protocol like the one showcased in my project.
+
+### Addendum 2: notes on adding a SGB border
+
+Since this is a SGB specific ROM, I thought it would be appropriate for it to have a border. This would then be the most normal SGB related thing that this ROM does. :)
+
+Not being much of an artist, I had the idea of simply showing the dumping process flow visually by showing an image of the cartridge, with an arrow to the GB screen, and then another arrow to an image of a file to represent the final product. I spent more time than I probably should have adding a few touches that no one else is going to care about.
+
+I used [Marc Robledo's Super Game Boy Converter](https://github.com/marcrobledo/super-game-boy-border-converter) for convering the graphics.
+
+#### Cartridge PCB
+
+For the source, I wanted a somewhat realistic image, so I started drawing the PCB on a photo of the real thing, with the SYS-SGB-2 ROM chip as the center of the image. Initially I tried to faithfully replicating the traces on the board as best as I could, but at some point that became unfeasible. So especially the things to the left of the ROM chip are not 100% accurate. 
+
+#### File image
+
+As for the file, I booted up a Windows 98 virtual machine to get some of that authentic period accurate unaliased MS Sans Serif action. The icon is, in turn, a modified version of a SNES9x icon. 
+
+#### Caption
+
+The top caption consists of the Super Gameboy caption with DUMPER added at the end. To make the added word fit in better with the original caption, I followed a special procedure. I first wrote the word in a text layer in Photoshop. I then exported that as a 4 color image. Then finally I replaced the two resulting antialiasing shades with the colors from the original logo. 
+
+#### Shadow background
+
+Then it was finally time for some embellishments. The first thing I thought of was to add a shadow behind everything that's offset by 2 pixels vertically and horizontally. Nice and simple. Then I got another idea. How about making a repeating collage in the background showing some topcailyl relevant images? For example a GB cartridge and a "download symbol". Then I thought of something else. The shadow from the SNES buttons could be used as one of the repeating elements,. because why not? The cartridge has a lightning bolt to represent that it is a "flash" cartridge and it says "nitro2k01" in the top because why not.
+
+#### Final optimization
+
+However, adding all that extra stuff, I ran into a slight issue. The image needs to fit within 256 unique tiles and a 15 color palette. (That's a 16 color palette where one color is used by the transparent color. More if you define multiple palettes.) Do the gold pads on the PCB really need to be a different color from the SNES controller's yellow B button? Does the arrow really need to be a different shade from the SGB text? No, and after a bit of tweaking the palette was within limits. 
+
+Then there was the tile limitations. I added a layer with a grid overlay to assist me with this. I had to sit down and move things around to make as many of the tiles as possible identical. For example, the line of the arrow is 6 pixels wide, which with a 2 pixel shadow is 8 pixels. By aligning it with a tile boundary, that ensures that those tiles are identical, whereas as tiles from the cartridge behind the arrow would be identical to other repetitions of the cartridge graphic.
+
+Another aspect of this is that the SNES can flip tiles in the X and Y direction. Therefore it is beneficial to have tiles that are mirrors of each others, since those can be optimized to use the same tile. For example, for the cartridge graphic, I made sure to size it and place it so that the two sides are mirrors of each other. I also made the "tray" of the download icon wider, so that it could reuse tiles from the cartridge graphic. All in all I finally got it below 256 tiles. 
+
+![Reused tiles between the cartridge and download graphics](images/reused-tiles.png)

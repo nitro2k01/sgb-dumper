@@ -30,6 +30,7 @@ PAL_ENTRY:	MACRO
 ENDM
 
 DEF charlist EQUS "\" !\\\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\""
+DEF charlist_alpha EQUS "\" ABCDEFGHIJKLMNOPQRSTUVWXYZ\""
 ; Empty charmap for use with the reference string in the SGB header.
 NEWCHARMAP default_raw
 ; Prepare default charmap for general strings.
@@ -46,6 +47,16 @@ NEWCHARMAP shaded
 DEF charnum = 0
 REPT STRLEN(charlist)
 	CHARMAP STRSUB(charlist,charnum+1,1),charnum+$60
+	DEF charnum += 1
+ENDR
+PURGE charnum
+CHARMAP "\n",10
+
+; Prepare deafult charmap for dark shaded strings.
+NEWCHARMAP shaded_dark
+DEF charnum = 0
+REPT STRLEN(charlist_alpha)
+	CHARMAP STRSUB(charlist_alpha,charnum+1,1),charnum+$E0
 	DEF charnum += 1
 ENDR
 PURGE charnum
@@ -97,7 +108,7 @@ SECTION "Rst28", ROM0[$28]
 
 
 SECTION "Rst30", ROM0[$30]
-WAIT_VBL:
+WAIT_VBL::
 .waitvbl
 	ldh	A,[rLY]
 	cp	$90
@@ -165,11 +176,18 @@ ENTRY::
 	inc	A
 	ld	[rROMB0],A
 
-	; Clear WRAM
+	; Clear WRAM.
 	ld	HL,$C000
 	ld	B,$E0			; Top byte of end address
 	ld	E,L			; L==0
 	call	FASTCLEAR
+
+	; Clear OAM.
+	ld	HL,$FEFF
+	ld	A,$c0
+:	dec	L
+	ld	[HL],A
+	jr	nz,:-
 
 	; Clear HRAM plus IF. (This also overwrites the stack but that's fine since nothing is on the stack atm.)
 	xor	A
@@ -187,43 +205,7 @@ ENTRY::
 	ld	A,%11100100
 	ldh	[rBGP],A
 
-	; Load a font into tile RAM.
-	ld	HL,basetiles
-	ld	DE,$8200
-	ld	BC,basetiles.end-basetiles
-	call	COPY
-
-	; Load a second copy of font into tile RAM for use with menu highlighting.
-	ld	HL,basetiles
-	ld	DE,$8600
-	ld	BC,basetiles.end-basetiles
-	call	COPY
-
-	; Apply shading to the second charset.
-	ld	HL,$8600
-	ld	B,$8A			; End tile
-:	ld	[HL],$FF
-	inc	L
-	inc	HL
-	ld	A,H
-	cp	B
-	jr	nz,:-
-
-	; Load a third copy of font into tile RAM to be inverted for the caption.
-	ld	HL,basetiles
-	ld	DE,$8A00
-	ld	BC,basetiles.end-basetiles
-	call	COPY
-
-	; Invert the third charset.
-	ld	HL,$8A00
-	ld	B,$8E			; End tile
-:	ld	A,[HL]
-	cpl
-	ld	[HL+],A
-	ld	A,H
-	cp	B
-	jr	nz,:-
+	call	INIT_TILESET
 
 	; Print the main screen contents.
 	ld	HL,S_ALL
@@ -288,7 +270,14 @@ POPC
 
 	rst	WAIT_VBL
 	ld	DE,$9880
-	ld	HL,S_SENDING
+	ld	HL,S_SENDING_BORDER
+	call	MPRINT
+
+	call	INIT_SGB_GFX		; Send border
+
+	rst	WAIT_VBL
+	ld	DE,$9880
+	ld	HL,S_SENDING_PAYLOAD
 	call	MPRINT
 
 	call	SEND_SGB_PAYLOAD
@@ -379,7 +368,71 @@ endc
 
 	jr	@
 
+	; Init the standard tileset used by the test ROM.
+INIT_TILESET::
+	; Load a font into tile RAM.
+	ld	HL,basetiles
+	ld	DE,$8200
+	ld	BC,basetiles.end-basetiles
+	call	COPY
+
+	; Load a second copy of font into tile RAM for use with menu highlighting.
+	ld	HL,basetiles
+	ld	DE,$8600
+	ld	BC,basetiles.end-basetiles
+	call	COPY
+
+	; Apply shading to the second charset.
+	ld	HL,$8600
+	ld	B,$8A			; End tile
+:	ld	[HL],$FF
+	inc	L
+	inc	HL
+	ld	A,H
+	cp	B
+	jr	nz,:-
+
+	; Load a third copy of font into tile RAM to be inverted for the caption.
+	ld	HL,basetiles
+	ld	DE,$8A00
+	ld	BC,basetiles.end-basetiles
+	call	COPY
+
+	; Invert the third charset.
+	ld	HL,$8A00
+	ld	B,$8E			; End tile
+:	ld	A,[HL]
+	cpl
+	ld	[HL+],A
+	ld	A,H
+	cp	B
+	jr	nz,:-
+
+	; Dark gray shaded, only alpha.
+	ld	HL,basetiles+$200
+	ld	DE,$8E00
+	ld	BC,basetiles.end-basetiles-$200
+	call	COPY
+
+	; Apply dark shading to the second charset.
+	ld	HL,$8E00
+	ld	B,$90			; End tile
+:	inc	L
+	ld	[HL],$FF
+	inc	HL
+	ld	A,H
+	cp	B
+	jr	nz,:-
+
+
+	ret
+
 DO_DUMP:
+	;
+	ld	A,1
+	ld	HL,ATTR_BLK_STATUS
+	call	SGB_SEND_PACKET
+
 	rst	WAIT_VBL
 
 	ld	A,LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_WINON|LCDCF_WIN9C00
@@ -505,7 +558,7 @@ endr
 	ld	[HL],"<"
 
 	push	HL
-	call	WAIT_SOME_FRAMES		; Wait some frames before starting the next transfer to allow data to be drawn to the screen.
+	call	WAIT_5_FRAMES		; Wait some frames before starting the next transfer to allow data to be drawn to the screen.
 	ld	HL,$A000
 	call	GET_ROM
 	rst	WAIT_VBL
@@ -530,7 +583,7 @@ endr
 	LDXY2	DE,0,0
 	call	MPRINT
 
-	call	WAIT_SOME_FRAMES		; Wait some frames before starting the next transfer to allow data to be drawn to the screen.
+	call	WAIT_5_FRAMES		; Wait some frames before starting the next transfer to allow data to be drawn to the screen.
 
 
 	xor	A
@@ -607,6 +660,8 @@ endr
 
 	ld	HL,S_OK
 :	call	MPRINT
+
+	call	WAIT_3_FRAMES		; Wait some frames before starting the next transfer to allow data to be drawn to the screen.
 
 	ld	A,[transfer_size_banks]
 	ld	B,A
@@ -690,6 +745,11 @@ SHOW_MENU:
 	xor	A
 	ldh	[menu_pos],A
 	ldh	[transfer_part],A
+
+	; Don't allow the transfer to be started for about a second, because the border transfer is still fading in.
+	; Menu movement is still allowed during this time to make the software as responsive as possible though.
+	ld	A,60
+	ldh	[warmup_delay],A
 	
 	; Check if ICD==00, meaning we're (probably) running in bsnes. If so, set longer delay.
 	ldh	A,[sstat_icd]
@@ -795,18 +855,25 @@ if MENU_SHOW_LY
 	call	PRINTHEX
 endc
 
+	; Decremment the warmup delay evbery frame until it hits 0.
+	ldh	A,[warmup_delay]
+	sub	1			; sub instead of dec to get access to the carry flag.
+	jr	c,:+			; c=1 -> counter was already 0.
+	ldh	[warmup_delay],A
+:
+
 	call	READ_JOYPAD
 	ldh	A,[joypad_pressed]
 	ld	B,A
 	bit	PADB_START,B		; Pressing start anywhere starts the transfer.
-	ret	nz
+	jr	nz,.try_start
 
 	; Menu movement.
 	ldh	A,[menu_pos]
 	cp	5
 	jr	nz,:+
 	bit	PADB_A,B		; Pressing A on the start menu item starts the transfer.
-	ret	nz
+	jr	nz,.try_start
 :	bit	PADB_DOWN,B
 	jr	z,:+
 	inc	A
@@ -858,6 +925,12 @@ endc
 	ld	[DE],A
 
 	jp	.wait_for_input
+.try_start
+	ldh	A,[warmup_delay]
+	or	A
+	ret	z
+	jp	.wait_for_input
+
 
 ; Memory address and Limits for the settings in the menu.
 MENU_DEFS:
@@ -879,10 +952,13 @@ if 1
 	db	-1,$40			; Min-1, Max+1. (This is further clamped elsewhere.)
 endc
 
-WAIT_SOME_FRAMES:
+WAIT_3_FRAMES:
+	ld	B,3
+	jr	WAIT_5_FRAMES.wait_b_frames
+WAIT_5_FRAMES:
 ;	ld	A,8
 ;	ldh	[$fffe],A
-	ld	b,5
+	ld	B,5
 .wait_b_frames
 	xor	A
 	ldh	[rIF],A
@@ -910,7 +986,7 @@ SGB_FAIL::
 ENDLESS_HALT::
 	di
 	; Endless loop of halt
-:	call	WAIT_SOME_FRAMES
+:	call	WAIT_5_FRAMES
 	jr	:-
 
 CALC_CHECKSUM_SRAM:
@@ -930,7 +1006,7 @@ if 0
 check1:
 	ldh	A,[$fffe]
 	cp	8
-	jr	z,WAIT_SOME_FRAMES.acheck1
+	jr	z,WAIT_5_FRAMES.acheck1
 	ld	A,1
 	ld	[$fff5],A
 	jp	CRASH_MII
@@ -938,7 +1014,7 @@ check1:
 check2:
 	ldh	A,[$fffe]
 	cp	8
-	jr	z,WAIT_SOME_FRAMES.acheck2
+	jr	z,WAIT_5_FRAMES.acheck2
 	ld	A,2
 	ld	[$fff5],A
 	jp	CRASH_MII
@@ -981,6 +1057,8 @@ CHARMAP "-",$6D
 	db "BOOT:       MLTREQ:-\n"
 	db "ACE:- HEADER:--\n"
 	db "FW:---- ICD:--\n"
+	db "\n\n\n\n\n\n\n\n\n\n\n\n\n"
+	db "              V1.0.1"
 	db 0
 POPC
 
@@ -1000,8 +1078,10 @@ POPC
 	db 0
 
 
-S_SENDING:
+S_SENDING_PAYLOAD:
 	db "SENDING PAYLOAD...",0
+S_SENDING_BORDER:
+	db "SENDING BORDER...",0
 
 
 S_SGBFAIL:
@@ -1047,8 +1127,10 @@ S_NO:
 	db "NO",normal_space,0
 S_YES:
 	db "YES",0
+SETCHARMAP shaded_dark
 S_BAD:
 	db "BAD",0
+SETCHARMAP shaded
 S_OK:
 	db "OK",0
 S_QMARKS:
@@ -1137,6 +1219,7 @@ transfer_size:		db
 transfer_size_banks:	db
 transfer_overclock:	db
 sstat_icd:		db
+warmup_delay:		db
 
 SECTION "Stack", HRAM[$FFEF]
 Stack:
