@@ -22,6 +22,10 @@ Under Linux and presumably macOS, just run `./m.sh`. Under Windows, run `m.bat`.
 
 If you are just looking for the ROM, go to [releases](https://github.com/nitro2k01/sgb-dumper/releases/).
 
+## AI disclosure
+
+AI/LLM technology was not used to create or assist with any part of this project made by me. The web merger is based on Marc Robledo's SGB Border Injector. It's unknown to me whether that original project used AI assistance, but probably unlikely.
+
 ## Usage
 
 ### Requirements
